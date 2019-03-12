@@ -1,1 +1,4 @@
 .idea/
+*.pyc
+data/pubmed_result.csv
+*.png
