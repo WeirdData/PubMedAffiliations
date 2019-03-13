@@ -2,3 +2,4 @@
 *.pyc
 data/pubmed_result.csv
 *.png
+data/pubmed_result_test.csv

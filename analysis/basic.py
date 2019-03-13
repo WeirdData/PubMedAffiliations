@@ -12,7 +12,7 @@ from models.objects import PubMedEntry
 
 def get_data() -> list:
     all_entries = []
-    with open(DATASET_FILE) as f:
+    with open(FILE_PUBMED, encoding="utf8") as f:
         data = csv.reader(f)
         for line in data:
             if line[0] != "Title":  # Remove Header
@@ -26,16 +26,24 @@ def plot_year_wise_publications():
     labels = []
     values = []
     for d in get_data():
-        year.update({d.year})
+        if d.year > 1979:
+            year.update({d.year})
 
     for y in year.most_common():
         labels.append(y[0])
         values.append(y[1])
-
+    zipped = zip(labels, values)
+    zipped = sorted(zipped)
+    zipped.reverse()
+    labels, values = zip(*zipped)
+    labels = list(labels)
     ind = range(len(labels))
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     plt.bar(ind, values, color=p.cerulean())
     plt.xticks(ind, labels, rotation=90)
     plt.ylabel("Number of publications")
+    plt.xlabel("Year (till 11 March 2019)")
     plt.tight_layout()
     plt.savefig("year_wise.png", type="png", dpi=300)
     plt.show()
@@ -43,10 +51,11 @@ def plot_year_wise_publications():
 
 def journal_over_years():
     number_of_journals = 3
-    p = palette.Palette()
+    p = palette.Palette(remove_white=True)
     year_data = defaultdict(Counter)
     for d in get_data():
-        year_data[d.year].update({d.journal})
+        if 2000 > d.year > 1979:
+            year_data[d.year].update({d.journal})
 
     year_label = []
     year_values = []
@@ -68,11 +77,19 @@ def journal_over_years():
             temp_name.append(c[0])
             global_color[c[0]].append(1)
 
-        year_label.append(f"{y}\n({total})")
+        year_label.append(f"{y}")
         year_values.append(temp_values)
         year_journals.append(temp_name)
 
-    color_palette = p.random(no_of_colors=len(global_color), grade=40)
+    zipped = zip(year_label, year_values, year_journals)
+    zipped = sorted(zipped)
+    year_label, year_values, year_journals = zip(*zipped)
+    color_palette = []
+    for f in p:
+        color_palette.append(f)
+    if len(color_palette) < len(global_color):
+        color_palette.extend(p.random(no_of_colors=len(global_color), grade=40))
+
     colors = {}
     for g in global_color:
         colors[g] = color_palette[0]
@@ -98,8 +115,8 @@ def journal_over_years():
         for i, patch in enumerate(bar_patch[j].get_children()):
             point = patch.get_xy()
             x = 0.5 * patch.get_width() + point[0]
-            y = 0.5 * patch.get_height() + point[1]
-            ax.text(x, y, f"{patch.get_width()}%", ha='center')
+            y = 0.4 * patch.get_height() + point[1]
+            # ax.text(x, y, f"{round(patch.get_width(), 1)}%", ha='center')
 
     legend_patches = []
     for key in colors:
@@ -108,8 +125,38 @@ def journal_over_years():
     plt.legend(handles=legend_patches, loc='center left', bbox_to_anchor=(1, 0.5))
     plt.tight_layout()
     plt.xlabel("Percentage of all paper published in given year")
-    plt.ylabel("Year (total no of papers published)")
+    plt.ylabel("Year")
     plt.savefig("year_top_journals.png", type="png", dpi=300)
+    plt.show()
+
+
+def author_per_year():
+    p = palette.Palette()
+    year = defaultdict(int)
+    articles = defaultdict(int)
+    labels = []
+    values = []
+    for d in get_data():
+        if d.year > 1979:
+            year[d.year] += len(d.authors)
+            articles[d.year] += 1
+
+    for y in year:
+        labels.append(y)
+        values.append(year[y] / articles[y])
+    zipped = zip(labels, values)
+    zipped = sorted(zipped)
+    zipped.reverse()
+    labels, values = zip(*zipped)
+    labels = list(labels)
+    ind = range(len(labels))
+    plt.bar(ind, values, color=p.green())
+    plt.xticks(ind, labels, rotation=90)
+    plt.ylabel("Number of authors per article")
+    plt.xlabel("Year (till 11 March 2019)")
+    plt.tight_layout()
+    plt.grid(axis='y', color="k", alpha=0.5, linestyle="--")
+    plt.savefig("author_wise.png", type="png", dpi=300)
     plt.show()
 
 
@@ -118,15 +165,37 @@ def get_statistics():
     data = get_data()
     journals = Counter()
     year = Counter()
+    authors = 0
     for d in get_data():
         journals.update({d.journal})
         year.update({d.year})
+        authors += len(d.authors)
 
     print("Total number of Papers : {0}\n--------------".format(len(data)))
     print(f"Total number of distinct journals : {len(journals)}\nTop {number_of_journals} journals")
     for j in journals.most_common(number_of_journals):
         print(j)
+    print(f"-------------------\nTotal number of authors : {authors}")
+    print(f"Authors per article : {authors / len(data)}")
+
+
+def budget_plot():
+    p = palette.Palette()
+    data = []
+    with open(FILE_BUDGET_DATA) as f:
+        for line in csv.reader(f):
+            data.append(line[4:])
+
+    ind = range(len(data[0]))
+    plt.bar(ind, [round(float(x), 2) for x in data[2]], color=p.blue(), label="World")
+    plt.bar(ind, [round(float(x), 2) for x in data[1]], color=p.orange(), label="India")
+    plt.ylabel("% of GDP")
+    plt.xlabel("Year")
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05),
+               ncol=2, fancybox=True, shadow=True)
+    plt.xticks(ind, data[0], rotation=90)
+    plt.show()
 
 
 def run():
-    journal_over_years()
+    budget_plot()
