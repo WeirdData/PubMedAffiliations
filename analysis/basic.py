@@ -25,10 +25,11 @@ def plot_year_wise_publications():
     year = Counter()
     labels = []
     values = []
+    total = 0
     for d in get_data():
-        if d.year > 1979:
-            year.update({d.year})
-
+        year.update({d.year})
+        if d.year == 1980:
+            total += 1
     for y in year.most_common():
         labels.append(y[0])
         values.append(y[1])
@@ -54,7 +55,7 @@ def journal_over_years():
     p = palette.Palette(remove_white=True)
     year_data = defaultdict(Counter)
     for d in get_data():
-        if 2000 > d.year > 1979:
+        if 2019 > d.year > 1999:
             year_data[d.year].update({d.journal})
 
     year_label = []
@@ -177,6 +178,7 @@ def get_statistics():
         print(j)
     print(f"-------------------\nTotal number of authors : {authors}")
     print(f"Authors per article : {authors / len(data)}")
+    print(year[2018])
 
 
 def budget_plot():
@@ -198,4 +200,4 @@ def budget_plot():
 
 
 def run():
-    budget_plot()
+    get_statistics()
