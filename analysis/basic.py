@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from SecretColors import palette
 
 from constants import *
@@ -199,5 +200,56 @@ def budget_plot():
     plt.show()
 
 
+def get_data_large_file():
+    headers = ["Title", "URL", "Description", "Details", "ShortDetails", "Resource", "Type", "Identifiers", "Db",
+               "EntrezUID", "Properties"]
+    chunk_size = 100000
+    base_df = pd.DataFrame(columns=headers)
+    for chunk in pd.read_csv(FILE_PUBMED, chunksize=chunk_size, names=headers, low_memory=False, nrows=10):
+        chunk['journal'] = chunk['ShortDetails'].str[:-4]
+        base_df = pd.concat([base_df, chunk], sort=False)
+
+    print(base_df["journal"].value_counts()[:5])
+    print(f"Number of Rows {base_df.shape[0]}")
+    print(f"Number of Journals {len(base_df['journal'].value_counts())}")
+
+
+def check_if_number(num):
+    try:
+        int(num)
+    except ValueError:
+        return False
+    return True
+
+
+def large_file_year_stats():
+    headers = ["Title", "URL", "Description", "Details", "ShortDetails", "Resource", "Type", "Identifiers", "Db",
+               "EntrezUID", "Properties"]
+    chunk_size = 100000
+    base_df = pd.DataFrame(columns=headers)
+    for chunk in pd.read_csv(FILE_PUBMED, chunksize=chunk_size, names=headers, low_memory=False):
+        chunk['year'] = chunk['ShortDetails'].str[-4:]
+        base_df = pd.concat([base_df, chunk], sort=False)
+    base_df = base_df.iloc[1:]
+    base_df = base_df[base_df['year'].apply(lambda x: check_if_number(x))]
+    base_df["year"] = base_df["year"].apply(pd.to_numeric)
+    base_df = base_df[base_df.year > 1979]
+    s = base_df["year"].value_counts()
+    labels = list(s.index)
+    values = s.values
+    zipped = zip(labels, values)
+    zipped = sorted(zipped)
+    zipped.reverse()
+    labels, values = zip(*zipped)
+    ind = range(len(labels))
+    plt.bar(ind, values, color=palette.Palette().magenta())
+    plt.xticks(ind, labels, rotation=90)
+    plt.ylabel("Number of publications")
+    plt.xlabel("Year (till 11 March 2019)")
+    plt.tight_layout()
+    plt.savefig("year_wise_other.png", type="png", dpi=300)
+    plt.show()
+
+
 def run():
-    get_statistics()
+    large_file_year_stats()
